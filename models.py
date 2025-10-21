@@ -1,48 +1,48 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
+from sqlalchemy import create_engine, Integer, String, Float, Column, ForeignKey, DateTime
+from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
-import os
-from extensions import db
 
-db = SQLAlchemy() 
+engine = create_engine('postgresql://postgres:Zawadi%402006#@localhost:5432/flask_api')
+session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 # Creating models
 # Products model
-class Product(db.Model):
+class Product(Base):
     __tablename__='products'
-    id=db.Column(db.Integer,primary_key=True)
-    name=db.Column(db.String,nullable=False)
-    buying_price=db.Column(db.Float,nullable=False)
-    selling_price=db.Column(db.Float,nullable=False)
+    id=Column(Integer,primary_key=True)
+    name=Column(String,nullable=False)
+    buying_price=Column(Float,nullable=False)
+    selling_price=Column(Float,nullable=False)
 
-    sales=db.relationship('Sale',backref='product')
+    # sales=relationship('Sale',backref='product')
 
 # Sales model
-class Sale(db.Model):
+class Sale(Base):
     __tablename__='sales'
-    id=db.Column(db.Integer,primary_key=True)
-    pid=db.Column(db.Integer,db.ForeignKey('products.id'),nullable=False)
-    quantity=db.Column(db.Integer,nullable=False)
-    created_at=db.Column(db.DateTime,nullable=False)
+    id=Column(Integer,primary_key=True)
+    pid=Column(Integer,ForeignKey('products.id'),nullable=False)
+    quantity=Column(Integer,nullable=False)
+    created_at=Column(DateTime,nullable=False)
 
 # User model
-class User(db.Model):
+class User(Base):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String, nullable=False)
-    email = db.Column(db.String, unique=True, nullable=False)
-    password = db.Column(db.String, nullable=False)
+    id = Column(Integer, primary_key=True)
+    full_name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
 
 # Payment model
-class Payment(db.Model):
+class Payment(Base):
     __tablename__ = 'payments'
-    id = db.Column(db.Integer, primary_key=True)
-    sale_id = db.Column(db.Integer, nullable=False)
-    mrid = db.Column(db.String(100), nullable=False)
-    crid = db.Column(db.String(100), nullable=False)
-    amount = db.Column(db.Float, nullable=True)
-    trans_code = db.Column(db.String(100), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id = Column(Integer, primary_key=True)
+    sale_id = Column(Integer, nullable=False)
+    mrid = Column(String(100), nullable=False)
+    crid = Column(String(100), nullable=False)
+    amount = Column(Float, nullable=True)
+    trans_code = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 
