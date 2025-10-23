@@ -23,11 +23,10 @@ class ProductDataResponse(ProductData):
 class SaleData(BaseModel):
     pid: int
     quantity: int
+    created_at: datetime = datetime.utcnow()
 
 class SaleDataResponse(SaleData):
     id: int
-    created_at: datetime = datetime.utcnow()
-
 
 class UserData(BaseModel):
     full_name: str
@@ -36,6 +35,14 @@ class UserData(BaseModel):
 
 class UserDataResponse(UserData):
     id: int
+
+# class UserLogin(BaseModel):
+#     email: str
+#     password: str
+
+# class UserLoginResponse(UserLogin):
+#     email: str
+#     password: str
 
 class PaymentData(BaseModel):
     sale_id: int
@@ -89,7 +96,6 @@ def add_user(user: UserData):
 @app.get("/payments", response_model=list[PaymentDataResponse])
 def get_payments():
     return db.query(Payment).all()
-
 
 @app.post("/payments", response_model=PaymentDataResponse)
 def add_payment(payment: PaymentData):
