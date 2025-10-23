@@ -1,7 +1,9 @@
 from typing import Union
 from fastapi import FastAPI
 from pydantic import BaseModel
-from models import  Product, session
+from models import  Product, session, Sale, Payment
+from datetime import datetime
+
 
 
 # Sentry / Slack / SQLAlchemy / Unit Test / Gitflow workflow / Jira / CICD /Docker
@@ -15,15 +17,31 @@ class ProductData(BaseModel):
     buying_price : float
     selling_price : float
 
-
 class ProductDataResponse(ProductData):
     id : int
 
+class SaleData(BaseModel):
+    pid: int
+    quantity: int
+    created_at: datetime = datetime.utcnow()
+
+class SaleDataResponse(SaleData):
+    id: int
+
+class PaymentData(BaseModel):
+    sale_id: int
+    mrid: str
+    crid: str
+    amount: float | None = None
+    trans_code: str | None = None
+    created_at: datetime = datetime.utcnow()
+
+class PaymentDataResponse(PaymentData):
+    id: int
 
 @app.get("/")
 def home():
     return {"Duka FastAPI": "1.0"}
-
 
 @app.get("/products", response_model=list[ProductDataResponse])
 def get_products():
@@ -35,6 +53,30 @@ def add_product(prod : ProductData):
     db.add(db_prod)
     db.commit()
     return db_prod
+
+@app.get("/sales", response_model=list[SaleDataResponse])
+def get_sales():
+    return db.query(Sale).all()
+
+
+@app.post("/sales", response_model=SaleDataResponse)
+def add_sale(sale: SaleData):
+    db_sale = Sale(**sale.dict())
+    db.add(db_sale)
+    db.commit()
+    return db_sale
+
+@app.get("/payments", response_model=list[PaymentDataResponse])
+def get_payments():
+    return db.query(Payment).all()
+
+
+@app.post("/payments", response_model=PaymentDataResponse)
+def add_payment(payment: PaymentData):
+    db_payment = Payment(**payment.dict())
+    db.add(db_payment)
+    db.commit()
+    return db_payment
 
 
 # Why use fastapi?
