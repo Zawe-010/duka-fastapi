@@ -36,13 +36,12 @@ class UserData(BaseModel):
 class UserDataResponse(UserData):
     id: int
 
-# class UserLogin(BaseModel):
-#     email: str
-#     password: str
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
-# class UserLoginResponse(UserLogin):
-#     email: str
-#     password: str
+class UserLoginResponse(UserLogin):
+    full_name: str
 
 class PaymentData(BaseModel):
     sale_id: int
@@ -92,6 +91,13 @@ def add_user(user: UserData):
     db.add(db_user)
     db.commit()
     return db_user
+
+@app.post("/login", response_model=UserLoginResponse)
+def user_login(userLogin: UserLogin):
+    db_login = db.query(User).filter(User.email == userLogin.email, User.password == userLogin.password).first()
+    if not db_login:
+        return "Invalid credentials"
+    return db_login
 
 @app.get("/payments", response_model=list[PaymentDataResponse])
 def get_payments():
