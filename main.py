@@ -1,7 +1,7 @@
 from typing import Union
 from fastapi import FastAPI
 from pydantic import BaseModel
-from models import  Product, session, Sale, Payment
+from models import  Product, session, Sale, User, Payment
 from datetime import datetime
 
 
@@ -23,9 +23,18 @@ class ProductDataResponse(ProductData):
 class SaleData(BaseModel):
     pid: int
     quantity: int
-    created_at: datetime = datetime.utcnow()
 
 class SaleDataResponse(SaleData):
+    id: int
+    created_at: datetime = datetime.utcnow()
+
+
+class UserData(BaseModel):
+    full_name: str
+    email: str
+    password: str 
+
+class UserDataResponse(UserData):
     id: int
 
 class PaymentData(BaseModel):
@@ -65,6 +74,17 @@ def add_sale(sale: SaleData):
     db.add(db_sale)
     db.commit()
     return db_sale
+
+@app.get("/users", response_model=list[UserDataResponse])
+def get_users():
+    return db.query(User).all()
+
+@app.post("/users", response_model=UserDataResponse)
+def add_user(user: UserData):
+    db_user = User(**user.dict())
+    db.add(db_user)
+    db.commit()
+    return db_user
 
 @app.get("/payments", response_model=list[PaymentDataResponse])
 def get_payments():
