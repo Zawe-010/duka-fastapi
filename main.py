@@ -1,24 +1,25 @@
-from typing import Union
-from fastapi import FastAPI
+from typing import List
+from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
-from models import  Product, session, Sale, User, Payment
 from datetime import datetime
-
-
-
-# Sentry / Slack / SQLAlchemy / Unit Test / Gitflow workflow / Jira / CICD /Docker
+from models import Product, Sale, User, Payment, session
+from auth.auth_routes import router as auth_router
+from auth.auth_service import get_current_user
 
 app = FastAPI()
 db = session()
 
+# Include auth routes
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
+# --- Pydantic Models ---
 class ProductData(BaseModel):
-    name : str
-    buying_price : float
-    selling_price : float
+    name: str
+    buying_price: float
+    selling_price: float
 
 class ProductDataResponse(ProductData):
-    id : int
+    id: int
 
 class SaleData(BaseModel):
     pid: int
@@ -31,17 +32,10 @@ class SaleDataResponse(SaleData):
 class UserData(BaseModel):
     full_name: str
     email: str
-    password: str 
+    password: str
 
 class UserDataResponse(UserData):
     id: int
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-class UserLoginResponse(UserLogin):
-    full_name: str
 
 class PaymentData(BaseModel):
     sale_id: int
@@ -54,62 +48,54 @@ class PaymentData(BaseModel):
 class PaymentDataResponse(PaymentData):
     id: int
 
+# --- Routes ---
 @app.get("/")
 def home():
     return {"Duka FastAPI": "1.0"}
 
-@app.get("/products", response_model=list[ProductDataResponse])
-def get_products():
+# Products
+@app.get("/products", response_model=List[ProductDataResponse])
+def get_products(current_user: User = Depends(get_current_user)):
     return db.query(Product).all()
 
 @app.post("/products", response_model=ProductDataResponse)
-def add_product(prod : ProductData):
+def add_product(prod: ProductData, current_user: User = Depends(get_current_user)):
     db_prod = Product(**prod.dict())
     db.add(db_prod)
     db.commit()
+    db.refresh(db_prod)
     return db_prod
 
-@app.get("/sales", response_model=list[SaleDataResponse])
-def get_sales():
+# Sales
+@app.get("/sales", response_model=List[SaleDataResponse])
+def get_sales(current_user: User = Depends(get_current_user)):
     return db.query(Sale).all()
 
-
 @app.post("/sales", response_model=SaleDataResponse)
-def add_sale(sale: SaleData):
+def add_sale(sale: SaleData, current_user: User = Depends(get_current_user)):
     db_sale = Sale(**sale.dict())
     db.add(db_sale)
     db.commit()
+    db.refresh(db_sale)
     return db_sale
 
-@app.get("/users", response_model=list[UserDataResponse])
-def get_users():
+# Users 
+@app.get("/users", response_model=List[UserDataResponse])
+def get_users(current_user: User = Depends(get_current_user)):
     return db.query(User).all()
 
-@app.post("/users", response_model=UserDataResponse)
-def add_user(user: UserData):
-    db_user = User(**user.dict())
-    db.add(db_user)
-    db.commit()
-    return db_user
-
-@app.post("/login", response_model=UserLoginResponse)
-def user_login(userLogin: UserLogin):
-    db_login = db.query(User).filter(User.email == userLogin.email, User.password == userLogin.password).first()
-    if not db_login:
-        return "Invalid credentials"
-    return db_login
-
-@app.get("/payments", response_model=list[PaymentDataResponse])
-def get_payments():
+# Payments
+@app.get("/payments", response_model=List[PaymentDataResponse])
+def get_payments(current_user: User = Depends(get_current_user)):
     return db.query(Payment).all()
 
 @app.post("/payments", response_model=PaymentDataResponse)
-def add_payment(payment: PaymentData):
+def add_payment(payment: PaymentData, current_user: User = Depends(get_current_user)):
     db_payment = Payment(**payment.dict())
     db.add(db_payment)
     db.commit()
+    db.refresh(db_payment)
     return db_payment
-
 
 # Why use fastapi?
 # 1. Type hints - We can validate the data type expected by a route.
