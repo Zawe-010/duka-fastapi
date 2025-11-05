@@ -2,12 +2,28 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-from models import Product, Sale, User, Payment, session
-from auth.auth_routes import router as auth_router
-from auth.auth_service import get_current_user
+from app.models import Product, Sale, User, Payment, session
+from app.auth.auth_service import get_current_user
+from fastapi.middleware.cors import CORSMiddleware
+from app.auth.auth_routes import router as auth_router
 
 app = FastAPI()
 db = session()
+
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include auth routes
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -22,12 +38,14 @@ class ProductDataResponse(ProductData):
     id: int
 
 class SaleData(BaseModel):
-    pid: int
     quantity: int
     created_at: datetime = datetime.utcnow()
 
 class SaleDataResponse(SaleData):
     id: int
+    product_name: str        
+    product_sp: float        
+    amount: float
 
 class UserData(BaseModel):
     full_name: str
@@ -69,7 +87,24 @@ def add_product(prod: ProductData, current_user: User = Depends(get_current_user
 # Sales
 @app.get("/sales", response_model=List[SaleDataResponse])
 def get_sales(current_user: User = Depends(get_current_user)):
-    return db.query(Sale).all()
+    sales = db.query(Sale).all()
+    response = []
+
+    for sale in sales:
+        product = db.query(Product).filter(Product.id == sale.pid).first()
+        if not product:
+            continue
+        
+        response.append(SaleDataResponse(
+            id=sale.id,
+            quantity=sale.quantity,
+            created_at=sale.created_at,
+            product_name=product.name,
+            product_sp=product.selling_price,
+            amount=sale.quantity * product.selling_price
+        ))
+    return response
+
 
 @app.post("/sales", response_model=SaleDataResponse)
 def add_sale(sale: SaleData, current_user: User = Depends(get_current_user)):
