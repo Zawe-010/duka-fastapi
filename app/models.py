@@ -2,7 +2,8 @@ from sqlalchemy import create_engine, Integer, String, Float, Column, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
 
-engine = create_engine('postgresql://postgres:Zawadi%402006#@localhost:5432/flask_api')
+engine = create_engine('postgresql://flask_api_user:Zawadi06zara@172.17.0.1:5432/flask_api')
+# engine = create_engine('postgresql://postgres:Zawadi%402006#@localhost:5432/flask_api')
 session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
