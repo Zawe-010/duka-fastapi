@@ -3,10 +3,10 @@ import bcrypt
 from .jwt_handler import JWTHandler
 from datetime import timedelta
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer
 
 db = session()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+oauth2_scheme = HTTPBearer(tokenUrl="auth/token")
 jwt_handler = JWTHandler()
 
 # Hash password
