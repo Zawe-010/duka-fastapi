@@ -10,10 +10,7 @@ from app.auth.auth_routes import router as auth_router
 app = FastAPI()
 db = session()
 
-@app.on_event("startup")
-def on_startup():
-    print("Creating database tables if they don't exist...")
-    Base.metadata.create_all(bind=engine)
+db.create_all()
 
 origins = [
     "http://localhost.tiangolo.com",
