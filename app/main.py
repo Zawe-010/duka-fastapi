@@ -2,13 +2,18 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-from app.models import Product, Sale, User, Payment, session
+from app.models import Product, Sale, User, Payment, session, Base, engine
 from app.auth.auth_service import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 from app.auth.auth_routes import router as auth_router
 
 app = FastAPI()
 db = session()
+
+@app.on_event("startup")
+def on_startup():
+    print("Creating database tables if they don't exist...")
+    Base.metadata.create_all(bind=engine)
 
 origins = [
     "http://localhost.tiangolo.com",
