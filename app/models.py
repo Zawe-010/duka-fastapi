@@ -45,6 +45,9 @@ class Payment(Base):
     trans_code = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# This is the correct way to create tables
+Base.metadata.create_all(bind=engine)
+
 
 # from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 # from sqlalchemy.orm import relationship, declarative_base
