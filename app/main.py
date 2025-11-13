@@ -8,7 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth.auth_routes import router as auth_router
 
 app = FastAPI()
-db = session()
+
+# Dependency for getting DB session per request
+def get_db():
+    db = session()
+    try:
+        yield db
+    finally:
+        db.close()
 
 origins = [
     "http://localhost.tiangolo.com",
