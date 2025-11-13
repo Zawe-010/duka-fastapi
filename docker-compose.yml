@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  fastapi:
+    build: .
+    container_name: fastapi
+    ports:
+      - "9000:80"
+    restart: always
+
+# Docker-compose is used to write all command needed to build and run a container.
