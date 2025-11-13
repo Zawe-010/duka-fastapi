@@ -10,8 +10,6 @@ from app.auth.auth_routes import router as auth_router
 app = FastAPI()
 db = session()
 
-db.create_all()
-
 origins = [
     "http://localhost.tiangolo.com",
     "https://localhost.tiangolo.com",
