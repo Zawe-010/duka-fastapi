@@ -81,11 +81,11 @@ def home():
 
 # Products
 @app.get("/products", response_model=List[ProductDataResponse])
-def get_products(current_user: User = Depends(get_current_user)):
+def get_products():
     return db.query(Product).all()
 
 @app.post("/products", response_model=ProductDataResponse)
-def add_product(prod: ProductData, current_user: User = Depends(get_current_user)):
+def add_product(prod: ProductData):
     db_prod = Product(**prod.dict())
     db.add(db_prod)
     db.commit()
