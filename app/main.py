@@ -2,10 +2,10 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-from app.models import Product, Sale, User, Payment, session, Base, engine
-from app.auth.auth_service import get_current_user
+from models import Product, Sale, User, Payment, session, Base, engine
+from auth.auth_service import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
-from app.auth.auth_routes import router as auth_router
+from auth.auth_routes import router as auth_router
 
 app = FastAPI()
 db = session()
@@ -81,11 +81,11 @@ def home():
 
 # Products
 @app.get("/products", response_model=List[ProductDataResponse])
-def get_products():
+def get_products(current_user: User = Depends(get_current_user)):
     return db.query(Product).all()
 
 @app.post("/products", response_model=ProductDataResponse)
-def add_product(prod: ProductData):
+def add_product(prod: ProductData, current_user: User = Depends(get_current_user)):
     db_prod = Product(**prod.dict())
     db.add(db_prod)
     db.commit()
