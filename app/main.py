@@ -264,6 +264,7 @@ def mpesa_stk_push(data: STKPushRequest, current_user: User = Depends(get_curren
 # --- MPesa Callback ---
 @app.post("/mpesa/callback")
 def mpesa_callback(data: dict):
+    print("Callback received:", json.dumps(data, indent=2))  # debug print
     try:
         stk_callback = data.get("Body", {}).get("stkCallback")
         if not stk_callback:
@@ -275,13 +276,14 @@ def mpesa_callback(data: dict):
 
         payment = db.query(Payment).filter_by(mrid=mrid, crid=crid).first()
         if not payment:
+            print("Payment record not found for MRID:", mrid, "CRID:", crid)
             return {"error": "Payment record not found"}
 
         if result_code == 0:
-            # Payment successful
             items = stk_callback.get("CallbackMetadata", {}).get("Item", [])
             amount = next((i.get("Value") for i in items if i.get("Name") == "Amount"), None)
             trans_code = next((i.get("Value") for i in items if i.get("Name") in ["MpesaReceiptNumber", "ReceiptNumber"]), None)
+
             payment.amount = float(amount) if amount else 0
             payment.trans_code = trans_code or "N/A"
         else:
@@ -289,9 +291,11 @@ def mpesa_callback(data: dict):
             payment.trans_code = "FAILED"
 
         db.commit()
+        print(f"Payment updated: MRID={mrid}, amount={payment.amount}, trans_code={payment.trans_code}")
         return {"success": True}
 
     except Exception as e:
+        print("Error in callback:", e)
         return {"error": str(e)}
 
 # --- MPesa Checker ---
