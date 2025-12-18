@@ -220,26 +220,46 @@ def get_users(current_user: User = Depends(get_current_user)):
 # --- Payments ---
 @app.get("/payments", response_model=List[PaymentDataResponse])
 def get_payments(current_user: User = Depends(get_current_user)):
-    return db.query(Payment).all()
+    payments = db.query(Payment).all()
+    response = []
+
+    for p in payments:
+        sale = db.query(Sale).filter(Sale.id == p.sale_id).first()
+        product = db.query(Product).filter(Product.id == sale.pid).first() if sale else None
+        response.append(PaymentDataResponse(
+            id=p.id,
+            sale_id=p.sale_id,
+            mrid=p.mrid,
+            crid=p.crid,
+            amount=p.amount,
+            trans_code=p.trans_code,
+            created_at=p.created_at
+        ))
+    return response
 
 # --- MPesa STK Push ---
 @app.post("/mpesa/stkpush")
 def mpesa_stk_push(data: STKPushRequest, current_user: User = Depends(get_current_user)):
-    amount = data.amount
-    phone_number = data.phone_number
-    sale_id = data.sale_id
-
-    # Send STK push
-    res = send_stk_push(amount, phone_number, sale_id)
+    res = send_stk_push(data.amount, data.phone_number, data.sale_id)
     mrid = res.get("MerchantRequestID")
     crid = res.get("CheckoutRequestID")
 
     if not mrid or not crid:
         raise HTTPException(status_code=400, detail="Failed to initiate M-Pesa STK Push")
 
-    # ✅ DO NOT create payment record here
-    return {"mpesa_response": res}
+    payment = Payment(
+        sale_id=data.sale_id,
+        mrid=mrid,
+        crid=crid,
+        amount=0,        # will be updated later in callback
+        trans_code="PENDING",
+        created_at=datetime.utcnow()
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
 
+    return {"mpesa_response": res, "payment_record_id": payment.id}
 
 # --- MPesa Callback ---
 @app.post("/mpesa/callback")
@@ -253,42 +273,25 @@ def mpesa_callback(data: dict):
         crid = stk_callback.get("CheckoutRequestID")
         result_code = stk_callback.get("ResultCode")
 
-        # Only create the payment record AFTER callback
+        payment = db.query(Payment).filter_by(mrid=mrid, crid=crid).first()
+        if not payment:
+            return {"error": "Payment record not found"}
+
         if result_code == 0:
             # Payment successful
             items = stk_callback.get("CallbackMetadata", {}).get("Item", [])
-            amount = next((i.get("Value") for i in items if i.get("Name") == "Amount"), 0)
-            trans_code = next((i.get("Value") for i in items if i.get("Name") in ["MpesaReceiptNumber", "ReceiptNumber"]), "N/A")
-
-            payment = Payment(
-                sale_id=int(stk_callback.get("CustomData", {}).get("sale_id", 0)),  # if you pass sale_id in STK push
-                mrid=mrid,
-                crid=crid,
-                amount=float(amount),
-                trans_code=trans_code,
-                created_at=datetime.utcnow()
-            )
-            db.add(payment)
-            db.commit()
-            db.refresh(payment)
+            amount = next((i.get("Value") for i in items if i.get("Name") == "Amount"), None)
+            trans_code = next((i.get("Value") for i in items if i.get("Name") in ["MpesaReceiptNumber", "ReceiptNumber"]), None)
+            payment.amount = float(amount) if amount else 0
+            payment.trans_code = trans_code or "N/A"
         else:
-            # Payment failed
-            payment = Payment(
-                sale_id=int(stk_callback.get("CustomData", {}).get("sale_id", 0)),
-                mrid=mrid,
-                crid=crid,
-                amount=0,
-                trans_code="FAILED",
-                created_at=datetime.utcnow()
-            )
-            db.add(payment)
-            db.commit()
-            db.refresh(payment)
+            payment.amount = 0
+            payment.trans_code = "FAILED"
 
+        db.commit()
         return {"success": True}
 
     except Exception as e:
-        db.rollback()
         return {"error": str(e)}
 
 # --- MPesa Checker ---
@@ -301,7 +304,6 @@ def mpesa_checker(sale_id: int):
         "trans_code": payment.trans_code,
         "amount": payment.amount
     }
-
 
 # Why use fastapi?
 # 1. Type hints - We can validate the data type expected by a route.
