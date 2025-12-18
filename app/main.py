@@ -306,7 +306,10 @@ def mpesa_checker(sale_id: int):
     payment = db.query(Payment).filter_by(sale_id=sale_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    return {"trans_code": payment.trans_code, "amount": payment.amount}
+    return {
+        "trans_code": payment.trans_code or None,
+        "amount": payment.amount or None
+    }
 
 # Why use fastapi?
 # 1. Type hints - We can validate the data type expected by a route.
