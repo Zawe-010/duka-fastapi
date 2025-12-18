@@ -1,39 +1,40 @@
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel
-from datetime import datetime
-from models import Product, Sale, User, Payment, session, Base, engine
-from auth.auth_service import get_current_user
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from datetime import datetime
+import json
+
+from models import Product, Sale, User, Payment, session
+from auth.auth_service import get_current_user
 from auth.auth_routes import router as auth_router
+from mpesa import send_stk_push  
+
+from pydantic import BaseModel
 
 app = FastAPI()
 db = session()
 
-# Dependency for getting DB session per request
-# def get_db():
-#     db = session()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
+# --- CORS ---
 origins = [
     "http://localhost.tiangolo.com",
     "https://localhost.tiangolo.com",
     "http://localhost",
     "http://localhost:8080",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://172.26.80.1:3001",
 ]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include auth routes
+# --- Include auth routes ---
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 # --- Pydantic Models ---
@@ -46,13 +47,14 @@ class ProductDataResponse(ProductData):
     id: int
 
 class SaleData(BaseModel):
+    pid: int
     quantity: int
     created_at: datetime = datetime.utcnow()
 
 class SaleDataResponse(SaleData):
     id: int
-    product_name: str        
-    product_sp: float        
+    product_name: str
+    product_sp: float
     amount: float
 
 class UserData(BaseModel):
@@ -74,12 +76,18 @@ class PaymentData(BaseModel):
 class PaymentDataResponse(PaymentData):
     id: int
 
+# --- MPesa Request Body Model ---
+class STKPushRequest(BaseModel):
+    amount: float
+    phone_number: str
+    sale_id: int
+
 # --- Routes ---
 @app.get("/")
 def home():
     return {"Duka FastAPI": "1.0"}
 
-# Products
+# --- Products ---
 @app.get("/products", response_model=List[ProductDataResponse])
 def get_products(current_user: User = Depends(get_current_user)):
     return db.query(Product).all()
@@ -92,7 +100,27 @@ def add_product(prod: ProductData, current_user: User = Depends(get_current_user
     db.refresh(db_prod)
     return db_prod
 
-# Sales
+@app.put("/products/{product_id}", response_model=ProductDataResponse)
+def update_product(
+    product_id: int,
+    prod: ProductData,
+    current_user: User = Depends(get_current_user)
+):
+    db_prod = db.query(Product).filter(Product.id == product_id).first()
+
+    if not db_prod:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    db_prod.name = prod.name
+    db_prod.buying_price = prod.buying_price
+    db_prod.selling_price = prod.selling_price
+
+    db.commit()
+    db.refresh(db_prod)
+
+    return db_prod
+
+# --- Sales ---
 @app.get("/sales", response_model=List[SaleDataResponse])
 def get_sales(current_user: User = Depends(get_current_user)):
     sales = db.query(Sale).all()
@@ -102,9 +130,9 @@ def get_sales(current_user: User = Depends(get_current_user)):
         product = db.query(Product).filter(Product.id == sale.pid).first()
         if not product:
             continue
-        
         response.append(SaleDataResponse(
             id=sale.id,
+            pid=sale.pid,
             quantity=sale.quantity,
             created_at=sale.created_at,
             product_name=product.name,
@@ -113,21 +141,82 @@ def get_sales(current_user: User = Depends(get_current_user)):
         ))
     return response
 
-
 @app.post("/sales", response_model=SaleDataResponse)
 def add_sale(sale: SaleData, current_user: User = Depends(get_current_user)):
-    db_sale = Sale(**sale.dict())
-    db.add(db_sale)
-    db.commit()
-    db.refresh(db_sale)
-    return db_sale
+    try:
+        db_sale = Sale(pid=sale.pid, quantity=sale.quantity, created_at=sale.created_at)
+        db.add(db_sale)
+        db.commit()
+        db.refresh(db_sale)
 
-# Users 
+        product = db.query(Product).filter(Product.id == db_sale.pid).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        return SaleDataResponse(
+            id=db_sale.id,
+            pid=db_sale.pid,
+            quantity=db_sale.quantity,
+            created_at=db_sale.created_at,
+            product_name=product.name,
+            product_sp=product.selling_price,
+            amount=db_sale.quantity * product.selling_price
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+# --- Dashboard ---
+@app.get("/dashboard")
+def dashboard(current_user: User = Depends(get_current_user)):
+    # Profit per product
+    profit_product = db.execute(text("""
+        SELECT p.name, 
+               SUM((p.selling_price - p.buying_price) * s.quantity) AS profit
+        FROM sales s
+        JOIN products p ON s.pid = p.id
+        GROUP BY p.id
+    """)).fetchall()
+
+    # Sales per day
+    sales_day = db.execute(text("""
+        SELECT DATE(s.created_at) AS date,
+               SUM(p.selling_price * s.quantity) AS sales
+        FROM sales s
+        JOIN products p ON s.pid = p.id
+        GROUP BY date
+        ORDER BY date
+    """)).fetchall()
+
+    def generate_colors(n):
+        return [f"hsl({int(360*i/n)}, 70%, 50%)" for i in range(n)]
+
+    products_name = [row[0] for row in profit_product]
+    products_sales = [float(row[1]) for row in profit_product]
+    products_colour = generate_colors(len(profit_product))
+
+    dates = [row[0].strftime("%Y-%m-%d") for row in sales_day]
+    sales = [float(row[1]) for row in sales_day]
+
+    data = {
+        "profit_per_product": {
+            "products_name": products_name,
+            "products_sales": products_sales,
+            "products_colour": products_colour
+        },
+        "sales_per_day": {
+            "dates": dates,
+            "sales": sales
+        }
+    }
+    return JSONResponse(content=data)
+
+# --- Users ---
 @app.get("/users", response_model=List[UserDataResponse])
 def get_users(current_user: User = Depends(get_current_user)):
     return db.query(User).all()
 
-# Payments
+# --- Payments ---
 @app.get("/payments", response_model=List[PaymentDataResponse])
 def get_payments(current_user: User = Depends(get_current_user)):
     return db.query(Payment).all()
@@ -139,6 +228,84 @@ def add_payment(payment: PaymentData, current_user: User = Depends(get_current_u
     db.commit()
     db.refresh(db_payment)
     return db_payment
+
+# --- MPesa STK Push ---
+@app.post("/mpesa/stkpush")
+def mpesa_stk_push(data: STKPushRequest, current_user: User = Depends(get_current_user)):
+    amount = data.amount
+    phone_number = data.phone_number
+    sale_id = data.sale_id
+
+    print("📌 STK PUSH REQUEST RECEIVED")
+    print(f"Sale ID: {sale_id}, Phone: {phone_number}, Amount: {amount}")
+
+    # Send STK push
+    res = send_stk_push(amount, phone_number, sale_id)
+    print("📌 STK PUSH RESPONSE:", res)
+
+    mrid = res.get("MerchantRequestID")
+    crid = res.get("CheckoutRequestID")
+
+    if not mrid or not crid:
+        print("❌ Failed to initiate M-Pesa STK Push")
+        raise HTTPException(status_code=400, detail="Failed to initiate M-Pesa STK Push")
+
+    # Create payment record WITHOUT amount/trans_code
+    payment = Payment(
+        mrid=mrid,
+        crid=crid,
+        sale_id=sale_id,
+        created_at=datetime.utcnow()
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+
+    print("✅ PAYMENT RECORD CREATED:", payment.id)
+    return {"mpesa_response": res, "payment_record_id": payment.id}
+
+
+# --- MPesa Callback ---
+@app.post("/mpesa/callback")
+def mpesa_callback(data: dict):
+    try:
+        stk_callback = data.get("Body", {}).get("stkCallback")
+        if not stk_callback:
+            return {"error": "Invalid callback format"}
+
+        mrid = stk_callback.get("MerchantRequestID")
+        crid = stk_callback.get("CheckoutRequestID")
+        result_code = stk_callback.get("ResultCode")
+
+        payment = db.query(Payment).filter_by(mrid=mrid, crid=crid).first()
+        if not payment:
+            return {"error": "Payment record not found"}
+
+        if result_code == 0:
+            items = stk_callback.get("CallbackMetadata", {}).get("Item", [])
+            amount = next((i.get("Value") for i in items if i.get("Name") == "Amount"), None)
+            trans_code = next((i.get("Value") for i in items if i.get("Name") == "MpesaReceiptNumber"), None)
+
+            payment.amount = amount
+            payment.trans_code = trans_code
+            db.commit()
+            print("✅ PAYMENT UPDATED SUCCESSFULLY")
+        else:
+            print("❌ PAYMENT FAILED WITH CODE:", result_code)
+
+        return {"success": True}
+
+    except Exception as e:
+        print("🔥 CALLBACK ERROR 🔥")
+        return {"error": str(e)}
+
+# --- MPesa Checker ---
+@app.get("/mpesa/checker/{sale_id}")
+def mpesa_checker(sale_id: int):
+    payment = db.query(Payment).filter_by(sale_id=sale_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return {"trans_code": payment.trans_code, "amount": payment.amount}
 
 # Why use fastapi?
 # 1. Type hints - We can validate the data type expected by a route.
