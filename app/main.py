@@ -25,6 +25,7 @@ origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://172.26.80.1:3001",
+    "https://my-duka.co.ke",
 ]
 app.add_middleware(
     CORSMiddleware,
