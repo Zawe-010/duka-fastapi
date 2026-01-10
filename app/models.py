@@ -41,14 +41,23 @@ class SalesDetails(Base):
 
 # User model
 class User(Base):
-    __tablename__='users'
-    id = Column(Integer, primary_key=True)
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=False)
-    phone = Column(String, nullable=False)  # for OTP
+    email = Column(String, unique=True, nullable=False, index=True)
+    phone = Column(String, nullable=True)  # Optional SMS OTP
     password = Column(String, nullable=False)
+
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+        
+    otps = relationship("OTP", backref="user", cascade="all, delete-orphan")
+
 
 # OTP model
 class OTP(Base):
