@@ -28,7 +28,7 @@ BREVO_SMTP_PORT = int(os.getenv("BREVO_SMTP_PORT", 587))
 AT_USERNAME = os.getenv("AT_USERNAME")
 AT_API_KEY = os.getenv("AT_API_KEY")
 africastalking.initialize(AT_USERNAME, AT_API_KEY)
-sms = africastalking.SMS
+sms = africastalking.SMS  
 
 # --- Pydantic Models ---
 class UserRegisterRequest(BaseModel):
