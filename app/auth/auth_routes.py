@@ -27,8 +27,14 @@ BREVO_SMTP_PORT = int(os.getenv("BREVO_SMTP_PORT", 587))
 # Africastalking SMS
 AT_USERNAME = os.getenv("AT_USERNAME")
 AT_API_KEY = os.getenv("AT_API_KEY")
-africastalking.initialize(AT_USERNAME, AT_API_KEY)
-sms = africastalking.SMS  
+
+# Initialize Africastalking SMS service
+try:
+    africastalking.initialize(AT_USERNAME, AT_API_KEY)
+    sms = africastalking.SMS()  # Initialize the SMS service correctly
+except Exception as e:
+    print("Africastalking initialization failed:", e)
+    sms = None  # Set to None if the initialization fails
 
 # --- Pydantic Models ---
 class UserRegisterRequest(BaseModel):
@@ -145,7 +151,11 @@ def forgot_password(data: ForgotPasswordRequest):
     elif method == "sms":
         if not user.phone:
             raise HTTPException(status_code=400, detail="No phone number found for this user")
+        if sms is None:
+            raise HTTPException(status_code=500, detail="Africastalking SMS service is not initialized correctly")
+
         try:
+            # Africastalking SMS integration
             response = sms.send(
                 message=f"Your password reset code is {otp_code}",
                 recipients=[user.phone]
