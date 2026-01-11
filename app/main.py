@@ -15,6 +15,13 @@ from pydantic import BaseModel
 
 app = FastAPI()
 db = session()
+try:
+    db.execute("SELECT 1")  
+except:
+    db.rollback()
+    db.close()
+    db = session()  
+
 
 # --- CORS ---
 origins = [
@@ -61,6 +68,7 @@ class SaleDataResponse(SaleData):
 class UserData(BaseModel):
     full_name: str
     email: str
+    phone: str
     password: str
 
 class UserDataResponse(UserData):

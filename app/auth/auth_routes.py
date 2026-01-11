@@ -79,7 +79,8 @@ def register(user: UserRegisterRequest):
             "access_token": token,
             "token_type": "bearer",
         }
-    except ValueError as e:
+    except Exception as e:
+        db.rollback()  # <-- this fixes the transaction error
         raise HTTPException(status_code=400, detail=str(e))
 
 # -----------------------------
