@@ -130,13 +130,14 @@ def forgot_password(data: ForgotPasswordRequest):
     db.commit()
 
     method = data.method.lower()
+
     if method == "email":
         try:
             message = MIMEMultipart()
             message['From'] = BREVO_SMTP_USERNAME
             message['To'] = user.email
             message['Subject'] = "Password Reset OTP"
-            body = f"Hello {user.full_name},\n\nYour password reset OTP is: {otp_code}\nThis code expires in 10 minutes."
+            body = f"Hello {user.full_name},\n\nYour OTP is: {otp_code}\nExpires in 10 minutes."
             message.attach(MIMEText(body, 'plain'))
 
             server = smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT)
@@ -144,30 +145,30 @@ def forgot_password(data: ForgotPasswordRequest):
             server.login(BREVO_SMTP_USERNAME, BREVO_SMTP_PASSWORD)
             server.send_message(message)
             server.quit()
-            return {"message": "OTP sent to your email"}
-        except Exception as e:
-            print("Email sending error:", e)
+
+            return {
+                "message": "OTP sent successfully",
+                "user_id": user.id
+            }
+
+        except Exception:
             raise HTTPException(status_code=500, detail="Failed to send OTP email")
 
     elif method == "sms":
         if not user.phone:
-            raise HTTPException(status_code=400, detail="No phone number found for this user")
-        if sms is None:
-            raise HTTPException(status_code=500, detail="Africastalking SMS service is not initialized correctly")
+            raise HTTPException(status_code=400, detail="No phone number found")
 
-        try:
-            # Africastalking SMS integration
-            response = sms.send(
-                message=f"Your password reset code is {otp_code}",
-                recipients=[user.phone]
-            )
-            print("SMS sent:", response)
-            return {"message": "OTP sent via SMS"}
-        except Exception as e:
-            print("Africastalking SMS error:", e)
-            raise HTTPException(status_code=500, detail="Failed to send OTP via SMS")
-    else:
-        raise HTTPException(status_code=400, detail="Invalid method. Choose 'email' or 'sms'")
+        response = sms.send(
+            message=f"Your OTP is {otp_code}",
+            recipients=[user.phone]
+        )
+
+        return {
+            "message": "OTP sent successfully",
+            "user_id": user.id
+        }
+
+    raise HTTPException(status_code=400, detail="Invalid method")
 
 # -----------------------------
 # 4. VERIFY OTP
