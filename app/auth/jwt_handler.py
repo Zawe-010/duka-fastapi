@@ -1,8 +1,14 @@
 from datetime import datetime, timedelta
 import jwt
+import os
 
-SECRET_KEY = "JBL2025"
-ALGORITHM = "HS256"
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY=os.getenv("SECRET_KEY")
+ALGORITHM=os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 class JWTHandler:
 
@@ -10,7 +16,7 @@ class JWTHandler:
         if expires_delta:
             expire = datetime.utcnow() + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=60)  
+            expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  
         payload = {
             "sub": email,
             "exp": expire,
