@@ -69,7 +69,7 @@ def register(user: UserRegisterRequest):
             user.password,
         )
         print("User-------", new_user.email)
-        token = create_access_token({"email":new_user.email})
+        token = create_access_token(new_user.email)
         print("Token -------", token)
         return {
             "access_token": token,

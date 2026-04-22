@@ -43,7 +43,7 @@ def authenticate_user(email: str, password: str):
 
 # Create access token
 def create_access_token(email: str, expires_minutes: int = 60):
-    return jwt_handler.create_token(identity=email, expires_delta=timedelta(minutes=expires_minutes))
+    return jwt_handler.create_token(email=email, expires_delta=timedelta(minutes=expires_minutes))
 
 # Get current user dependency
 async def get_current_user(token: str = Depends(oauth2_scheme)):
