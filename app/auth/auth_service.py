@@ -1,4 +1,4 @@
-from app.models import User, session
+from models import User, session
 import bcrypt
 from .jwt_handler import JWTHandler
 from datetime import timedelta
@@ -18,6 +18,7 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 def register_user(full_name: str, email: str, password: str):
+    print("----------",full_name)
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
@@ -42,7 +43,7 @@ def authenticate_user(email: str, password: str):
 
 # Create access token
 def create_access_token(email: str, expires_minutes: int = 60):
-    return jwt_handler.create_token(email, expires_delta=timedelta(minutes=expires_minutes))
+    return jwt_handler.create_token(identity=email, expires_delta=timedelta(minutes=expires_minutes))
 
 # Get current user dependency
 async def get_current_user(token: str = Depends(oauth2_scheme)):

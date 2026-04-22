@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_URL = os.getenv("DATABASE_URL")
-# DB_URL = "postgresql://postgres:Zawadi%402006#@localhost:5432/flask_api"
+# DB_URL = os.getenv("DATABASE_URL")
+DB_URL = "postgresql://postgres:Zawadi%402006#@localhost:5432/flask_api"
 print("Database url in models.py------", DB_URL)
 engine = create_engine(DB_URL)
 session = sessionmaker(autocommit=False, autoflush=False, bind=engine)

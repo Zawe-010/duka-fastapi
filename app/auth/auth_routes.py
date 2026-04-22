@@ -10,8 +10,8 @@ import africastalking
 import os
 from dotenv import load_dotenv
 
-from app.models import User, OTP, session
-from .auth_service import (
+from models import User, OTP, session
+from auth.auth_service import (
     hash_password,
     authenticate_user,
     create_access_token,
@@ -68,7 +68,9 @@ def register(user: UserRegisterRequest):
             user.email,
             user.password,
         )
-        token = create_access_token(new_user.email)
+        print("User-------", new_user.email)
+        token = create_access_token({"email":new_user.email})
+        print("Token -------", token)
         return {
             "access_token": token,
             "token_type": "bearer",
