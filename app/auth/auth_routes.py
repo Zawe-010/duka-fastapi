@@ -7,8 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import africastalking
-import os
-from dotenv import load_dotenv
+from config import (BREVO_SMTP_USERNAME, BREVO_SMTP_SERVER, BREVO_SMTP_PORT, BREVO_SMTP_PASSWORD, AT_USERNAME, AT_API_KEY)
 
 from models import User, OTP, session
 from auth.auth_service import (
@@ -19,17 +18,8 @@ from auth.auth_service import (
 )
 
 router = APIRouter()
-load_dotenv()
 db = session()
 
-# ---------------- ENV ----------------
-BREVO_SMTP_USERNAME = os.getenv("BREVO_SMTP_USERNAME")
-BREVO_SMTP_PASSWORD = os.getenv("BREVO_SMTP_PASSWORD")
-BREVO_SMTP_SERVER = os.getenv("BREVO_SMTP_SERVER")
-BREVO_SMTP_PORT = int(os.getenv("BREVO_SMTP_PORT", 587))
-
-AT_USERNAME = os.getenv("AT_USERNAME")
-AT_API_KEY = os.getenv("AT_API_KEY")
 
 # ---------------- SMS INIT ----------------
 try:

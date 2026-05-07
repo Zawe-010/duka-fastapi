@@ -1,16 +1,8 @@
 from datetime import datetime, timedelta
 import jwt
-import os
+from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret-key")
-ALGORITHM=os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-ACCESS_TOKEN_EXPIRE_MINUTES=int(ACCESS_TOKEN_EXPIRE_MINUTES)
-
+ACCESS_TOKEN_EXPIRE_MINUTES = int(ACCESS_TOKEN_EXPIRE_MINUTES)
 class JWTHandler:
 
     def create_token(self, email: str, expires_delta: timedelta = None):

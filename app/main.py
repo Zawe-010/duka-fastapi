@@ -5,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from datetime import datetime
 import json
-import os
-from dotenv import load_dotenv
 
 from models import Product, Sale, User, Payment, session
 from auth.auth_service import get_current_user
@@ -35,11 +33,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-load_dotenv()
-
-DB_URL = os.getenv("DATABASE_URL")
-print("Database url in main.py-----------------------------------------------------------------------", DB_URL)
 
 # --- Include auth routes ---
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
