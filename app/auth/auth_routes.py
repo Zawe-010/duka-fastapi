@@ -137,6 +137,7 @@ def forgot_password(data: ForgotPasswordRequest):
         server.login(BREVO_SMTP_USERNAME, BREVO_SMTP_PASSWORD)
         server.send_message(msg)
         server.quit()
+        print("Message",msg)
 
     else:
         sms.send(message=f"Your OTP is {otp_code}", recipients=[user.phone])
