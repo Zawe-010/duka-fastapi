@@ -1,4 +1,4 @@
-from models import User, session
+from app.models import User, session
 import bcrypt
 from .jwt_handler import JWTHandler
 from datetime import timedelta
