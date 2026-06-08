@@ -7,7 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import africastalking
-from config import (BREVO_SMTP_USERNAME, BREVO_SMTP_SERVER, BREVO_SMTP_PORT, BREVO_SMTP_PASSWORD, AT_USERNAME, AT_API_KEY)
+from app.config import (BREVO_SMTP_USERNAME, BREVO_SMTP_SERVER, BREVO_SMTP_PORT, BREVO_SMTP_PASSWORD, AT_USERNAME, AT_API_KEY)
 
 from models import User, OTP, session
 from auth.auth_service import (
