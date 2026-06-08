@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Integer, String, Float, Column, ForeignKey, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime
-from config import DB_URL
+from app.config import DB_URL
 
 engine = create_engine(DB_URL)
 session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
