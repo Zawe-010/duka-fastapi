@@ -6,7 +6,7 @@ from sqlalchemy import text
 from datetime import datetime
 import json
 
-from models import Product, Sale, User, Payment, session
+from app.models import Product, Sale, User, Payment, session
 from auth.auth_service import get_current_user
 from auth.auth_routes import router as auth_router
 from mpesa import send_stk_push  
