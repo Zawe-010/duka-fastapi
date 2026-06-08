@@ -9,8 +9,8 @@ from email.mime.multipart import MIMEMultipart
 import africastalking
 from app.config import (BREVO_SMTP_USERNAME, BREVO_SMTP_SERVER, BREVO_SMTP_PORT, BREVO_SMTP_PASSWORD, AT_USERNAME, AT_API_KEY)
 
-from models import User, OTP, session
-from auth.auth_service import (
+from app.models import User, OTP, session
+from app.auth.auth_service import (
     hash_password,
     authenticate_user,
     create_access_token,
