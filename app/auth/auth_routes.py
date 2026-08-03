@@ -40,7 +40,7 @@ class LoginRequest(BaseModel):
     password: str
 
 class ForgotPasswordRequest(BaseModel):
-    method: str          # email | sms
+    method: str        # email | sms
     identifier: str      # email or phone
 
 class VerifyOTPRequest(BaseModel):
@@ -107,7 +107,7 @@ def login_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 # ---------------- FORGOT PASSWORD ----------------
 @router.post("/forgot-password", tags=["auth"])
-def forgot_password(data: ForgotPasswordRequest):
+def forgot_password(data: ForgotPasswordRequest, db: Session=Depends(get_db)):
     method = data.method.lower()
     identifier = data.identifier
     print("data-------", data)
@@ -131,6 +131,9 @@ def forgot_password(data: ForgotPasswordRequest):
         msg["To"] = user.email
         msg["Subject"] = "Password Reset OTP"
         msg.attach(MIMEText(f"Your OTP is {otp_code}", "plain"))
+        print("Server------",BREVO_SMTP_SERVER)
+        print("Port------",BREVO_SMTP_PORT)
+        print("Username------",BREVO_SMTP_USERNAME)
 
         server = smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT)
         server.starttls()
