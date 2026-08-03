@@ -110,7 +110,7 @@ def login_token(form_data: OAuth2PasswordRequestForm = Depends()):
 def forgot_password(data: ForgotPasswordRequest):
     method = data.method.lower()
     identifier = data.identifier
-
+    print("data-------", data)
     if method == "email":
         user = db.query(User).filter(User.email == identifier).first()
     elif method == "sms":
