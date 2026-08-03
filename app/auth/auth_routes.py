@@ -107,7 +107,7 @@ def login_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 # ---------------- FORGOT PASSWORD ----------------
 @router.post("/forgot-password", tags=["auth"])
-def forgot_password(data: ForgotPasswordRequest, db: Session=Depends(get_db)):
+def forgot_password(data: ForgotPasswordRequest):
     method = data.method.lower()
     identifier = data.identifier
     print("data-------", data)
