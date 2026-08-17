@@ -172,6 +172,7 @@ def forgot_password(data: ForgotPasswordRequest):
     try:
         method = data.method.lower()
         identifier = data.identifier
+        print("Forgot password request-----", method, identifier)
 
         if method == "email":
             user = db.query(User).filter(
@@ -206,10 +207,30 @@ def forgot_password(data: ForgotPasswordRequest):
         )
 
         db.commit()
+        print("otp saved to the database successfully------", otp_code)
 
-        # SMTP code here...
+        if method == "email":
+            msg = MIMEMultipart()
+            msg["From"] = BREVO_SMTP_USERNAME
+            msg["To"] = user.email
+            msg["Subject"] = "Password Reset OTP"
+            msg.attach(MIMEText(f"Your OTP is {otp_code}", "plain"))
+            print("Server------",BREVO_SMTP_SERVER)
+            print("Port------",BREVO_SMTP_PORT)
+            print("Username------",BREVO_SMTP_USERNAME)
 
-        return {"message": "OTP sent successfully"}
+            server = smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT)
+            server.starttls()
+            server.login(BREVO_SMTP_USERNAME, BREVO_SMTP_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            print("Message",msg)
+
+        else:
+            sms.send(message=f"Your OTP is {otp_code}", recipients=[user.phone])
+
+        return {"message": "OTP sent", "user_id": user.id}
+
 
     finally:
         db.close()
