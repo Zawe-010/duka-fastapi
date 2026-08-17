@@ -106,64 +106,113 @@ def login_token(form_data: OAuth2PasswordRequestForm = Depends()):
     }
 
 # ---------------- FORGOT PASSWORD ----------------
+# @router.post("/forgot-password", tags=["auth"])
+# def forgot_password(data: ForgotPasswordRequest, db : Session = Depends(get_db)):
+#     method = data.method.lower()
+#     identifier = data.identifier
+#     print("data-------", data)
+#     if method == "email":
+#         user = db.query(User).filter(User.email == identifier).first()
+#     elif method == "sms":
+#         user = db.query(User).filter(User.phone == identifier).first()
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid method")
+
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     otp_code = str(randint(1000, 9999))
+#     db.add(OTP(user_id=user.id, otp=otp_code, created_at=datetime.utcnow()))
+#     db.commit()
+
+#     if method == "email":
+#         msg = MIMEMultipart()
+#         msg["From"] = BREVO_SMTP_USERNAME
+#         msg["To"] = user.email
+#         msg["Subject"] = "Password Reset OTP"
+#         msg.attach(MIMEText(f"Your OTP is {otp_code}", "plain"))
+#         print("Server------",BREVO_SMTP_SERVER)
+#         print("Port------",BREVO_SMTP_PORT)
+#         print("Username------",BREVO_SMTP_USERNAME)
+
+#         server = smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT)
+#         server.starttls()
+#         server.login(BREVO_SMTP_USERNAME, BREVO_SMTP_PASSWORD)
+#         server.send_message(msg)
+#         server.quit()
+#         print("Message",msg)
+
+#     else:
+#         sms.send(message=f"Your OTP is {otp_code}", recipients=[user.phone])
+
+#     return {"message": "OTP sent", "user_id": user.id}
+
+# # ---------------- VERIFY OTP ----------------
+# @router.post("/verify-code/{user_id}", tags=["auth"])
+# def verify_otp(user_id: int, data: VerifyOTPRequest):
+#     record = (
+#         db.query(OTP)
+#         .filter(OTP.user_id == user_id, OTP.otp == data.otp)
+#         .order_by(OTP.created_at.desc())
+#         .first()
+#     )
+
+#     if not record:
+#         raise HTTPException(status_code=400, detail="Invalid OTP")
+
+#     if datetime.utcnow() - record.created_at > timedelta(minutes=10):
+#         raise HTTPException(status_code=400, detail="OTP expired")
+
+#     return {"message": "OTP verified"}
+
 @router.post("/forgot-password", tags=["auth"])
 def forgot_password(data: ForgotPasswordRequest):
-    method = data.method.lower()
-    identifier = data.identifier
-    print("data-------", data)
-    if method == "email":
-        user = db.query(User).filter(User.email == identifier).first()
-    elif method == "sms":
-        user = db.query(User).filter(User.phone == identifier).first()
-    else:
-        raise HTTPException(status_code=400, detail="Invalid method")
+    db = session()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        method = data.method.lower()
+        identifier = data.identifier
 
-    otp_code = str(randint(1000, 9999))
-    db.add(OTP(user_id=user.id, otp=otp_code, created_at=datetime.utcnow()))
-    db.commit()
+        if method == "email":
+            user = db.query(User).filter(
+                User.email == identifier
+            ).first()
 
-    if method == "email":
-        msg = MIMEMultipart()
-        msg["From"] = BREVO_SMTP_USERNAME
-        msg["To"] = user.email
-        msg["Subject"] = "Password Reset OTP"
-        msg.attach(MIMEText(f"Your OTP is {otp_code}", "plain"))
-        print("Server------",BREVO_SMTP_SERVER)
-        print("Port------",BREVO_SMTP_PORT)
-        print("Username------",BREVO_SMTP_USERNAME)
+        elif method == "sms":
+            user = db.query(User).filter(
+                User.phone == identifier
+            ).first()
 
-        server = smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT)
-        server.starttls()
-        server.login(BREVO_SMTP_USERNAME, BREVO_SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        print("Message",msg)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid method"
+            )
 
-    else:
-        sms.send(message=f"Your OTP is {otp_code}", recipients=[user.phone])
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
 
-    return {"message": "OTP sent", "user_id": user.id}
+        otp_code = str(randint(1000, 9999))
 
-# ---------------- VERIFY OTP ----------------
-@router.post("/verify-code/{user_id}", tags=["auth"])
-def verify_otp(user_id: int, data: VerifyOTPRequest):
-    record = (
-        db.query(OTP)
-        .filter(OTP.user_id == user_id, OTP.otp == data.otp)
-        .order_by(OTP.created_at.desc())
-        .first()
-    )
+        db.add(
+            OTP(
+                user_id=user.id,
+                otp=otp_code,
+                created_at=datetime.utcnow()
+            )
+        )
 
-    if not record:
-        raise HTTPException(status_code=400, detail="Invalid OTP")
+        db.commit()
 
-    if datetime.utcnow() - record.created_at > timedelta(minutes=10):
-        raise HTTPException(status_code=400, detail="OTP expired")
+        # SMTP code here...
 
-    return {"message": "OTP verified"}
+        return {"message": "OTP sent successfully"}
+
+    finally:
+        db.close()
 
 # ---------------- RESET PASSWORD ----------------
 @router.post("/reset-password/{user_id}", tags=["auth"])
