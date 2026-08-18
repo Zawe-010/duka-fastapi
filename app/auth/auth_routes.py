@@ -211,7 +211,7 @@ def forgot_password(data: ForgotPasswordRequest):
 
         if method == "email":
             msg = MIMEMultipart()
-            msg["From"] = BREVO_SMTP_USERNAME
+            msg["From"] = MAIL_DEFAULT_SENDER
             msg["To"] = user.email
             msg["Subject"] = "Password Reset OTP"
             msg.attach(MIMEText(f"Your OTP is {otp_code}", "plain"))
