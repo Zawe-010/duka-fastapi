@@ -7,7 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import africastalking
-from app.config import (BREVO_SMTP_USERNAME, BREVO_SMTP_SERVER, BREVO_SMTP_PORT, BREVO_SMTP_PASSWORD, AT_USERNAME, AT_API_KEY)
+from app.config import (BREVO_SMTP_USERNAME, BREVO_SMTP_SERVER, BREVO_SMTP_PORT, BREVO_SMTP_PASSWORD, AT_USERNAME, AT_API_KEY, SMTP_FROM_EMAIL)
 
 from app.models import User, OTP, session
 from app.auth.auth_service import (
@@ -211,7 +211,7 @@ def forgot_password(data: ForgotPasswordRequest):
 
         if method == "email":
             msg = MIMEMultipart()
-            msg["From"] = MAIL_DEFAULT_SENDER
+            msg["From"] = SMTP_FROM_EMAIL
             msg["To"] = user.email
             msg["Subject"] = "Password Reset OTP"
             msg.attach(MIMEText(f"Your OTP is {otp_code}", "plain"))
