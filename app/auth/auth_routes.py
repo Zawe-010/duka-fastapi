@@ -147,23 +147,6 @@ def login_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 #     return {"message": "OTP sent", "user_id": user.id}
 
-# # ---------------- VERIFY OTP ----------------
-# @router.post("/verify-code/{user_id}", tags=["auth"])
-# def verify_otp(user_id: int, data: VerifyOTPRequest):
-#     record = (
-#         db.query(OTP)
-#         .filter(OTP.user_id == user_id, OTP.otp == data.otp)
-#         .order_by(OTP.created_at.desc())
-#         .first()
-#     )
-
-#     if not record:
-#         raise HTTPException(status_code=400, detail="Invalid OTP")
-
-#     if datetime.utcnow() - record.created_at > timedelta(minutes=10):
-#         raise HTTPException(status_code=400, detail="OTP expired")
-
-#     return {"message": "OTP verified"}
 
 @router.post("/forgot-password", tags=["auth"])
 def forgot_password(data: ForgotPasswordRequest):
@@ -234,6 +217,24 @@ def forgot_password(data: ForgotPasswordRequest):
 
     finally:
         db.close()
+
+# ---------------- VERIFY OTP ----------------
+@router.post("/verify-code/{user_id}", tags=["auth"])
+def verify_otp(user_id: int, data: VerifyOTPRequest):
+    record = (
+        db.query(OTP)
+        .filter(OTP.user_id == user_id, OTP.otp == data.otp)
+        .order_by(OTP.created_at.desc())
+        .first()
+    )
+
+    if not record:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    if datetime.utcnow() - record.created_at > timedelta(minutes=10):
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    return {"message": "OTP verified"}
 
 # ---------------- RESET PASSWORD ----------------
 @router.post("/reset-password/{user_id}", tags=["auth"])
